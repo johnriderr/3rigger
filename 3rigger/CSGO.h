@@ -8,12 +8,15 @@ public:
 	~CSGO();
 
 	void init(const char* procName);
-	bool isPlayerOnTheGround();
-	void jump();
+	bool playerOnTheGround();	
+	void bHop();
+	bool bHopEnabled;
 private:
-	HANDLE _hProcess;
-	DWORD _gameModuleBaseAddr;
-	DWORD _localPlayer;
+	void shoot();
+	void jump();	
+	HANDLE hProcess;
+	DWORD gameModuleBaseAddr;
+	DWORD localPlayer;
 };
 
 

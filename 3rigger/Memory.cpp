@@ -52,5 +52,4 @@ namespace Memory
 		}
 		return hModule;
 	}
-
 }
