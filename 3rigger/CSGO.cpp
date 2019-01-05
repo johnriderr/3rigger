@@ -58,14 +58,14 @@ void CSGO::shoot()
 		&n1,
 		sizeof(int),
 		NULL);
-	
+
 }
 
 void CSGO::bHop()
 {
-	while (true) 
+	while (true)
 	{
-		if (this->bHopEnabled && playerOnTheGround())
+		if (bHopEnabled && playerOnTheGround())
 		{
 			jump();
 		}
@@ -73,9 +73,77 @@ void CSGO::bHop()
 	}
 }
 
+int CSGO::getCrosshair()
+{
+	int crosshair;
+
+	ReadProcessMemory(hProcess,
+		(LPCVOID)(localPlayer + Offsets::m_iCrosshairId),
+		&crosshair,
+		sizeof(crosshair),
+		NULL);
+
+	return crosshair;
+}
+
+void CSGO::triggerBot()
+{
+	while (true)
+	{
+		int crosshair = getCrosshair();
+		if (triggerBotEnabled && crosshair != 0 && crosshair < 64)
+		{
+			DWORD entity;
+			ReadProcessMemory(hProcess,
+				(LPCVOID)(gameModuleBaseAddr + Offsets::dwEntityList + ((crosshair - 1) * 0x10)),
+				&entity,
+				sizeof(entity),
+				NULL);
+
+			int eTeam;
+			ReadProcessMemory(hProcess,
+				(LPCVOID)(entity + Offsets::m_iTeamNum),
+				&eTeam,
+				sizeof(eTeam),
+				NULL);
+
+
+			if (eTeam != myTeam)
+			{
+				shoot();
+				Sleep(50);
+			}
+		}
+		Sleep(3);
+	}
+}
+
+void CSGO::updateLocalPlayer()
+{
+	while (true)
+	{
+		ReadProcessMemory(hProcess,
+			(LPCVOID)(gameModuleBaseAddr + Offsets::dwLocalPlayer),
+			&localPlayer,
+			sizeof(localPlayer),
+			NULL);
+
+		ReadProcessMemory(hProcess,
+			(LPCVOID)(localPlayer + Offsets::m_iTeamNum),
+			&myTeam,
+			sizeof(myTeam),
+			NULL);
+
+		Sleep(1000);
+	}
+
+	
+
+}
+
 CSGO::CSGO()
 {
-	
+
 }
 
 CSGO::~CSGO()

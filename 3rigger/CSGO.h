@@ -11,8 +11,15 @@ public:
 	bool playerOnTheGround();	
 	void bHop();
 	bool bHopEnabled;
-private:
+	bool triggerBotEnabled;
+
 	void shoot();
+	void triggerBot();
+	int getCrosshair();
+	void updateLocalPlayer();
+
+private:
+	int myTeam=6;
 	void jump();	
 	HANDLE hProcess;
 	DWORD gameModuleBaseAddr;
