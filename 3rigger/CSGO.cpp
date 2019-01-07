@@ -11,22 +11,12 @@ void CSGO::init(const char* procName)
 	DWORD pid = Memory::getPid(procName);
 	hProcess = OpenProcess(PROCESS_ALL_ACCESS, false, pid);
 	gameModuleBaseAddr = Memory::getProcModule(pid, "client_panorama.dll");
-
-	ReadProcessMemory(hProcess,
-		(LPCVOID)(gameModuleBaseAddr + Offsets::dwLocalPlayer),
-		&localPlayer,
-		sizeof(localPlayer),
-		NULL);
+	localPlayer = Memory::readProcMemory<DWORD>(hProcess, gameModuleBaseAddr + Offsets::dwLocalPlayer);
 }
 
 bool CSGO::playerOnTheGround()
 {
-	BYTE flag;
-	ReadProcessMemory(hProcess,
-		(LPCVOID)(localPlayer + Offsets::m_fFlags),
-		&flag,
-		sizeof(flag),
-		NULL);
+	BYTE flag = Memory::readProcMemory<BYTE>(hProcess, localPlayer + Offsets::m_fFlags);
 
 	if (flag & (1 << 0))
 		return true;
@@ -35,12 +25,7 @@ bool CSGO::playerOnTheGround()
 
 void CSGO::jump()
 {
-	int n = 6;
-	WriteProcessMemory(hProcess,
-		(LPVOID)(gameModuleBaseAddr + Offsets::dwForceJump),
-		&n,
-		sizeof(int),
-		NULL);
+	Memory::writeProcMemory<int>(hProcess, gameModuleBaseAddr + Offsets::dwForceJump, 6);
 }
 
 void CSGO::shoot()
@@ -51,7 +36,9 @@ void CSGO::shoot()
 		&n,
 		sizeof(int),
 		NULL);
+
 	Sleep(50);
+
 	int n1 = 4;
 	WriteProcessMemory(hProcess,
 		(LPVOID)(gameModuleBaseAddr + Offsets::dwForceAttack),
@@ -75,14 +62,7 @@ void CSGO::bHop()
 
 int CSGO::getCrosshair()
 {
-	int crosshair;
-
-	ReadProcessMemory(hProcess,
-		(LPCVOID)(localPlayer + Offsets::m_iCrosshairId),
-		&crosshair,
-		sizeof(crosshair),
-		NULL);
-
+	int crosshair = Memory::readProcMemory<int>(hProcess, localPlayer + Offsets::m_iCrosshairId);
 	return crosshair;
 }
 
@@ -93,20 +73,9 @@ void CSGO::triggerBot()
 		int crosshair = getCrosshair();
 		if (triggerBotEnabled && crosshair != 0 && crosshair < 64)
 		{
-			DWORD entity;
-			ReadProcessMemory(hProcess,
-				(LPCVOID)(gameModuleBaseAddr + Offsets::dwEntityList + ((crosshair - 1) * 0x10)),
-				&entity,
-				sizeof(entity),
-				NULL);
+			DWORD entity= Memory::readProcMemory<int>(hProcess, Offsets::dwEntityList + ((crosshair - 1) * 0x10));	
 
-			int eTeam;
-			ReadProcessMemory(hProcess,
-				(LPCVOID)(entity + Offsets::m_iTeamNum),
-				&eTeam,
-				sizeof(eTeam),
-				NULL);
-
+			int eTeam= Memory::readProcMemory<int>(hProcess, entity + Offsets::m_iTeamNum);
 
 			if (eTeam != myTeam)
 			{
@@ -114,7 +83,7 @@ void CSGO::triggerBot()
 				Sleep(50);
 			}
 		}
-		Sleep(3);
+		Sleep(5);
 	}
 }
 
@@ -122,22 +91,57 @@ void CSGO::updateLocalPlayer()
 {
 	while (true)
 	{
-		ReadProcessMemory(hProcess,
-			(LPCVOID)(gameModuleBaseAddr + Offsets::dwLocalPlayer),
-			&localPlayer,
-			sizeof(localPlayer),
-			NULL);
+		localPlayer=Memory::readProcMemory<int>(hProcess, gameModuleBaseAddr + Offsets::dwLocalPlayer);
 
-		ReadProcessMemory(hProcess,
-			(LPCVOID)(localPlayer + Offsets::m_iTeamNum),
-			&myTeam,
-			sizeof(myTeam),
-			NULL);
+		Memory::readProcMemory<int>(hProcess, localPlayer + Offsets::m_iTeamNum);
+		myTeam = ReadProcessMemory<int>(hProcess, localPlayer + Offsets::m_iTeamNum);		
 
 		Sleep(1000);
 	}
 
 	
+
+}
+
+void CSGO::glowEsp()
+{
+	while (true)
+	{
+		Sleep(2);
+		if (!glowEspEnabled)
+			continue;
+
+		DWORD glowObject = Memory::readProcMemory<int>(hProcess, gameModuleBaseAddr + Offsets::dwGlowObjectManager);
+		int myTeam = Memory::readProcMemory<int>(hProcess, localPlayer + Offsets::m_iTeamNum);
+
+		for (short int i = 0; i < 64; i++)
+		{
+			DWORD entity = Memory::readProcMemory<DWORD>(hProcess, gameModuleBaseAddr + Offsets::dwEntityList + i * 0x10);
+
+			if (entity != NULL)
+			{		
+				int glowIndx = Memory::readProcMemory<int>(hProcess, entity + Offsets::m_iGlowIndex);
+				int entityTeam = Memory::readProcMemory<int>(hProcess, entity + Offsets::m_iTeamNum);
+
+				if (myTeam == entityTeam)
+				{
+					Memory::writeProcMemory<float>(hProcess, glowObject + ((glowIndx * 0x38) + 0x4), 0);
+					Memory::writeProcMemory<float>(hProcess, glowObject + ((glowIndx * 0x38) + 0x8), 0);
+					Memory::writeProcMemory<float>(hProcess, glowObject + ((glowIndx * 0x38) + 0xC), 2);
+					Memory::writeProcMemory<float>(hProcess, glowObject + ((glowIndx * 0x38) + 0x10), 1);
+				}
+				else
+				{
+					Memory::writeProcMemory<float>(hProcess, glowObject + ((glowIndx * 0x38) + 0x4), 2);
+					Memory::writeProcMemory<float>(hProcess, glowObject + ((glowIndx * 0x38) + 0x8), 0);
+					Memory::writeProcMemory<float>(hProcess, glowObject + ((glowIndx * 0x38) + 0xC), 0);
+					Memory::writeProcMemory<float>(hProcess, glowObject + ((glowIndx * 0x38) + 0x10), 1);
+				}
+				Memory::writeProcMemory<bool>(hProcess, glowObject + ((glowIndx * 0x38) + 0x24), true);
+				Memory::writeProcMemory<bool>(hProcess, glowObject + ((glowIndx * 0x38) + 0x25), false);
+			}
+		}	
+	}
 
 }
 

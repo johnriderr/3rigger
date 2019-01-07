@@ -12,14 +12,17 @@ public:
 	void bHop();
 	bool bHopEnabled;
 	bool triggerBotEnabled;
+	bool glowEspEnabled;
 
 	void shoot();
 	void triggerBot();
 	int getCrosshair();
 	void updateLocalPlayer();
+	void glowEsp();
+
 
 private:
-	int myTeam=6;
+	int myTeam;
 	void jump();	
 	HANDLE hProcess;
 	DWORD gameModuleBaseAddr;
